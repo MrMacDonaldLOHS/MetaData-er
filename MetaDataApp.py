@@ -1,5 +1,6 @@
 import random
 import math
+import os
 import numpy as np
 from tkinter import *
 from tkinter import font
@@ -109,7 +110,23 @@ class MetaDataApp:
         gifImage.save(f) 
 
     def exeButtonCmd(self):
-        print("Button worked")
+        files=[("exe", "*.exe")]
+        f = asksaveasfilename(defaultextension=".exe", filetypes=files) 
+        if f is None:
+            return
+        cFile = open('temp.c', 'w')
+        main="int main(int argc, char **argv) {\n"
+        main=main+"    __asm__(\".byte "
+        main=main+str(self.data[0])
+        for index in range(1, len(self.data)):
+            main = main + ",\"\n   \"" + str(self.data[index])
+        main = main+"\");\n"
+        main = main+"    return 0;\n"
+        main = main+"}"
+        cFile.write(main)
+        cFile.close()
+        os.system("gcc temp.c -o " + f)
+
 
 root = Tk()
 app = MetaDataApp(root)
