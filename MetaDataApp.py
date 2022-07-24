@@ -7,6 +7,8 @@ from tkinter import font
 from tkinter import scrolledtext
 from tkinter.filedialog import asksaveasfilename
 from PIL import ImageTk, Image
+import wave
+import struct
 
 class MetaDataApp:
     def __init__(self, root):
@@ -34,8 +36,11 @@ class MetaDataApp:
         self.gifButton=Button(frame, text="GIF", command=self.gifButtonCmd)
         self.gifButton.grid(column=2, row=0, pady=1, padx=1, sticky='nesw')
 
-        self.gifButton=Button(frame, text="EXE", command=self.exeButtonCmd)
+        self.gifButton=Button(frame, text="WAV", command=self.wavButtonCmd)
         self.gifButton.grid(column=3, row=0, pady=1, padx=1, sticky='nesw')
+
+        self.gifButton=Button(frame, text="EXE", command=self.exeButtonCmd)
+        self.gifButton.grid(column=4, row=0, pady=1, padx=1, sticky='nesw')
 
         self.initRandomSizeWidgets(frame, 2) 
 
@@ -47,7 +52,8 @@ class MetaDataApp:
         self.binaryDisplay=scrolledtext.ScrolledText(frame, wrap='word', font=("consolas", textSize), height=5, width=10*4)
         self.binaryDisplay.grid(column=0, columnspan=maxColumns-1, row=textRow, rowspan=maxRows-textRow)
 
-        self.randomizeData()
+        self.randomizeData("32")
+
         
     def initRandomSizeWidgets(self, frame, rowNum):
         dropDownLabel=Label(frame, text="Bytes To Create:")
@@ -61,15 +67,15 @@ class MetaDataApp:
             size = size<<1
         self.variable.set(sizes[0])
 
-        self.sizeDrop=OptionMenu(frame, self.variable, *sizes)
+        self.sizeDrop=OptionMenu(frame, self.variable, *sizes, command=self.randomizeData)
         self.sizeDrop.grid(column=1, row=rowNum, pady=1, sticky='ew')
 
-        createBytesButton = Button(frame, text="GO", command=self.randomizeData)
-        createBytesButton.grid(column=2, row=rowNum, pady=1, sticky='ew')
+        #createBytesButton = Button(frame, text="GO", command=self.randomizeData)
+        #createBytesButton.grid(column=2, row=rowNum, pady=1, sticky='ew')
 
-    def randomizeData(self):
+    def randomizeData(self, choice):
         self.data=[]
-        numBytes = self.variable.get()
+        numBytes = int(choice)
         while(len(self.data) < numBytes):
             self.data.append(random.randrange(0,256))
         self.binaryDisplay.delete('0.0', 'end')
@@ -82,7 +88,7 @@ class MetaDataApp:
     def textButtonCmd(self):
         files=[("Text", "*.txt")]
         f = asksaveasfilename(defaultextension=".txt", filetypes=files) 
-        if f is None:
+        if f is None or len(f) == 0:
             return
         txtFile = open(f, 'w+b')
         txtFile.write(bytearray(self.data))
@@ -91,7 +97,7 @@ class MetaDataApp:
     def gifButtonCmd(self):
         files=[("Gif", "*.gif")]
         f = asksaveasfilename(defaultextension=".gif", filetypes=files) 
-        if f is None:
+        if f is None or len(f) == 0:
             return
         gifPixels = []
         numPixels = len(self.data) / 3
@@ -103,29 +109,56 @@ class MetaDataApp:
                 tempList.append((self.data[index], self.data[index + 1], self.data[index + 2]))
             gifPixels.append(tempList)
 
-        print(gifPixels)
         pixelArray=np.array(gifPixels, dtype=np.uint8)
-        print(pixelArray)
         gifImage = Image.fromarray(pixelArray)
         gifImage.save(f) 
+
+    def wavButtonCmd(self):
+        files=[("wav", "*.wav")]
+        f = asksaveasfilename(defaultextension=".wav", filetypes=files) 
+        if f is None or len(f) == 0:
+            return
+        
+
+        waveFile = wave.open(f, mode='wb')
+        waveFile.setnchannels(1)
+        waveFile.setsampwidth(2)
+        waveFile.setframerate(500)
+        for index in range(0, len(self.data), 2):
+            value = (self.data[index] << 8) | self.data[index + 1]
+            value = value & 0x7fff
+            if (self.data[index] & 0x80) != 0:
+                value = value * -1
+            sound = struct.pack('<h', value)
+            waveFile.writeframesraw(sound)
+        waveFile.close()
+
+
 
     def exeButtonCmd(self):
         files=[("exe", "*.exe")]
         f = asksaveasfilename(defaultextension=".exe", filetypes=files) 
-        if f is None:
+        if f is None or len(f) == 0:
             return
-        cFile = open('temp.c', 'w')
-        main="int main(int argc, char **argv) {\n"
+        fileName=f.replace('.exe','.cpp')
+        cFile = open(fileName, 'w')
+        main="#include <stdio.h>\n"
+        main=main+"int main(int argc, char **argv) {\n"
+        main=main+"  try{\n";
         main=main+"    __asm__(\".byte "
         main=main+str(self.data[0])
         for index in range(1, len(self.data)):
             main = main + ",\"\n   \"" + str(self.data[index])
         main = main+"\");\n"
+        main = main+"    printf(\"Inexplicably the code ran without crashing\\n\");\n"
+        main = main+"  }catch(...){\n";
+        main = main+"    printf(\"%s performed an illegal operation, terminating program.\", argv[0]);\n"
+        main = main+"  }\n"
         main = main+"    return 0;\n"
         main = main+"}"
         cFile.write(main)
         cFile.close()
-        os.system("gcc temp.c -o " + f)
+        os.system("g++ " + fileName + " -o " + f)
 
 
 root = Tk()
