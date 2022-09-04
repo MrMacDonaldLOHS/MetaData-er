@@ -76,6 +76,9 @@ class MetaDataApp:
     def randomizeData(self, choice):
         self.data=[]
         numBytes = int(choice)
+        firstByte=[0x4, 0x5, 0x80, 0x81, 0x83, 0x00, 0x01, 0x02, 0x03]
+        self.data.append( firstByte[random.randrange(len(firstByte))])
+
         while(len(self.data) < numBytes):
             self.data.append(random.randrange(0,256))
         self.binaryDisplay.delete('0.0', 'end')
