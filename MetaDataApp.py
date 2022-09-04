@@ -49,7 +49,7 @@ class MetaDataApp:
         textEndColumn=maxColumns-2
 
         
-        self.binaryDisplay=scrolledtext.ScrolledText(frame, wrap='word', font=("consolas", textSize), height=5, width=10*4)
+        self.binaryDisplay=scrolledtext.ScrolledText(frame, wrap='word', font=("consolas", textSize + 30), height=8, width=10*4)
         self.binaryDisplay.grid(column=0, columnspan=maxColumns-1, row=textRow, rowspan=maxRows-textRow)
 
         self.randomizeData("32")
@@ -145,8 +145,14 @@ class MetaDataApp:
             return
         fileName=f.replace('.exe','.cpp')
         cFile = open(fileName, 'w')
-        main="#include <stdio.h>\n"
-        main=main+"int main(int argc, char **argv) {\n"
+        main ="#include <signal.h>\n"
+        main ="#include <stdio.h>\n"
+        main = main + "void sighandler(int num) {\n"
+        main = main + "    printf(\"Your program performed an illegal operation and was terminated.\");\n"
+        main = main + "    getchar();\n"
+        main = main + "    }\n"
+        main = main + "int main(int argc, char **argv) {\n"
+        main = main + "    signal(SIGSEGV, sighandler);\n"
         main=main+"  try{\n";
         main=main+"    __asm__(\".byte "
         main=main+str(self.data[0])
@@ -157,6 +163,8 @@ class MetaDataApp:
         main = main+"  }catch(...){\n";
         main = main+"    printf(\"%s performed an illegal operation, terminating program.\", argv[0]);\n"
         main = main+"  }\n"
+        main = main+"  printf(\"Press any key to continue\");\n"
+        main = main+"  getchar();\n"
         main = main+"    return 0;\n"
         main = main+"}"
         cFile.write(main)
