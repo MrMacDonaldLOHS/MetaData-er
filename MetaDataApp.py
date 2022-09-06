@@ -145,26 +145,12 @@ class MetaDataApp:
             return
         fileName=f.replace('.exe','.cpp')
         cFile = open(fileName, 'w')
-        main ="#include <signal.h>\n"
-        main ="#include <stdio.h>\n"
-        main = main + "void sighandler(int num) {\n"
-        main = main + "    printf(\"Your program performed an illegal operation and was terminated.\");\n"
-        main = main + "    getchar();\n"
-        main = main + "    }\n"
-        main = main + "int main(int argc, char **argv) {\n"
-        main = main + "    signal(SIGSEGV, sighandler);\n"
-        main=main+"  try{\n";
+        main = "int main(int argc, char **argv) {\n"
         main=main+"    __asm__(\".byte "
         main=main+str(self.data[0])
         for index in range(1, len(self.data)):
             main = main + ",\"\n   \"" + str(self.data[index])
         main = main+"\");\n"
-        main = main+"    printf(\"Inexplicably the code ran without crashing\\n\");\n"
-        main = main+"  }catch(...){\n";
-        main = main+"    printf(\"%s performed an illegal operation, terminating program.\", argv[0]);\n"
-        main = main+"  }\n"
-        main = main+"  printf(\"Press any key to continue\");\n"
-        main = main+"  getchar();\n"
         main = main+"    return 0;\n"
         main = main+"}"
         cFile.write(main)
